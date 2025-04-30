@@ -3,7 +3,10 @@ from telebot import types
 import requests
 import wikipedia
 
-token='7167953032:AAEj1xNN1W6C7IQJkTu47bOOFqK6tGLGjDg'
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_gigachat.chat_models import GigaChat
+
+token='7805823166:AAFg57HTvzDI7rMstK7JpkR-aqyHJ-ggrEU'
 newsAPI='a6a607d662ab41b29ef6a4da5713afba'
 wikipedia.set_lang('ru')
 # Создание бота
@@ -14,8 +17,10 @@ def start(mybot, res=False):
     mymarkup=types.ReplyKeyboardMarkup(resize_keyboard=True)
     button1=types.KeyboardButton('Погода')
     button2=types.KeyboardButton('Википедия')
+    button3=types.KeyboardButton('Giga Болтун')
     mymarkup.add(button1)
     mymarkup.add(button2)
+    mymarkup.add(button3)
     bot.send_message(mybot.chat.id, 'Я на связи. Напиши мне что-нибудь.', reply_markup=mymarkup)
 
 # Функция трансляции прогноза погоды
@@ -71,6 +76,27 @@ def Wiki(message):
     except Exception as e:
         return 'В Википедии нет статьи по вашему запросу'
 
+# Болталка
+@bot.message_handler(func=lambda message: True)
+def Speak(message):
+    if message.text in ["Стоп!", "Хватит!", "Stop!"]:
+        bot.send_message(message.chat.id, "Диалог завершён")
+        return
+    giga = GigaChat(
+    # Для авторизации запросов используйте ключ, полученный в проекте GigaChat API
+    credentials="MTRiMjdmNGYtZWEyNS00ODZkLWE3MGYtNjQ3YWU3YTI3MDY4OjlmMWZjNGMzLWMwOGUtNDJhOC05NTVlLTIwNDI3NjZhZTRjMw==",
+    verify_ssl_certs=False,
+    )
+    messages = [
+    SystemMessage(
+        content="Ты эмпатичный бот-психолог, который помогает пользователю решить его проблемы.")
+    ]
+    messages.append(HumanMessage(content=message.text))
+    res = giga.invoke(messages)
+    messages.append(res)
+    bot.send_message(message.chat.id, res.content )
+    
+
 
 # Получение сообщений от пользователя
 @bot.message_handler(content_types=['text'])
@@ -81,8 +107,11 @@ def text(message):
     elif message.text=='Википедия':
             bot.send_message(message.chat.id, 'Введите свой запрос для Википедии: ')
             bot.register_next_step_handler(message, Wiki)
+    elif message.text=='Giga Болтун':
+            bot.send_message(message.chat.id, 'Введите свой запрос для Болтуна: ')
+            bot.register_next_step_handler(message, Speak)
     else:
-        bot.send_message(message.chat.id, f'Вы написали: {message.text}')
+        bot.send_message(message.chat.id, f'Вы написали {message.text}')
 
 # Запуск бота
 bot.polling(non_stop=True, interval=0)
